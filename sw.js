@@ -1,6 +1,6 @@
 /* Offline support. Updates arrive on the launch after a deploy.
    Bump VERSION only if you add or rename files in SHELL. */
-const VERSION = 'mahfuzat-v8';
+const VERSION = 'mahfuzat-v9';
 const SHELL = [
   './',
   'index.html',

@@ -246,12 +246,15 @@
 
   // Words saved offline get filled the next time the app opens online (a few per launch).
   function backfill() {
-    var todo = state.words.filter(function (w) { return needsLookup(w) && !w.lookupTried; }).slice(0, 15);
+    var RETRY = 6 * 3600e3; // a failed lookup is tried again after 6 hours, never given up for good
+    var todo = state.words.filter(function (w) {
+      return needsLookup(w) && (typeof w.lookupTried !== 'number' || Date.now() - w.lookupTried > RETRY);
+    }).slice(0, 15);
     todo.reduce(function (p, w) {
       return p.then(function () {
         return fillMissing(w.id).then(function (ok) {
           var cur = byId(w.id);
-          if (cur && needsLookup(cur) && navigator.onLine !== false) { cur.lookupTried = true; save(); } // one try per gap
+          if (cur && needsLookup(cur) && navigator.onLine !== false) { cur.lookupTried = Date.now(); save(); }
         });
       });
     }, Promise.resolve());
@@ -304,6 +307,7 @@
       sync.lastAt = Date.now();
       sync.error = '';
       saveSync();
+      setTimeout(backfill, 500);
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
       if (currentTab === 'list') renderList();
       else if (currentTab === 'add') renderStats();
