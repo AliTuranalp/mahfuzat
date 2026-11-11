@@ -4,17 +4,17 @@ const VERSION = 'mahfuzat-v7';
 const SHELL = [
   './',
   'index.html',
-  'css/styles.css',
-  'js/content.js',
-  'js/logic.js',
-  'js/lookup.js',
-  'js/sync.js',
-  'js/app.js',
+  'styles.css',
+  'content.js',
+  'logic.js',
+  'lookup.js',
+  'sync.js',
+  'app.js',
   'manifest.json',
-  'icons/icon.svg',
-  'icons/apple-touch-icon.png',
-  'icons/icon-192.png',
-  'icons/icon-512.png'
+  'icon.svg',
+  'apple-touch-icon.png',
+  'icon-192.png',
+  'icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
