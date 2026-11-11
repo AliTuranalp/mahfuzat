@@ -155,6 +155,7 @@ h1 {
   text-align: center;
 }
 .note.is-warn { color: var(--gold); }
+.note.is-filled { color: var(--text); }
 .note.is-milestone { font-size: 17px; font-weight: 700; color: var(--gold); }
 
 .stats {

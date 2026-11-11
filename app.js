@@ -152,13 +152,28 @@
     resetAddFields();
     wordEl.value = '';
     wordEl.focus();
-    // Saved before the dictionary answered (fast Enter, or offline): fill it in afterwards.
-    fillMissing(created.id);
-
     var m = L.milestoneCrossed(before, state.words.length);
     if (m) note('add-note', C.milestones[m], 'milestone', 6000);
-    else note('add-note', 'Saved.');
+    else if (created.meaning && created.example) note('add-note', 'Saved.');
+    else note('add-note', 'Saved. Looking up “' + created.word + '”…', null, 0);
     renderAdd();
+
+    // Fill whatever is still empty (fast Save, or offline) and say what arrived.
+    fillMissing(created.id).then(function (changed) {
+      if (m) return;
+      var w = byId(created.id);
+      if (!w) return;
+      if (changed) {
+        var bits = [w.tr, w.meaning].filter(Boolean).join(' · ');
+        note('add-note', '“' + w.word + '”: ' + bits, 'filled', 7000);
+      } else if (!w.meaning || !w.example) {
+        note('add-note', navigator.onLine === false
+          ? 'Saved offline. The meaning will be added when you are back online.'
+          : 'Saved. No dictionary entry found for “' + w.word + '”.', null, 5000);
+      } else {
+        note('add-note', 'Saved.');
+      }
+    });
   });
 
   /* ---------- automatic meaning + example ---------- */
