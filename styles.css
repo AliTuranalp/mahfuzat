@@ -261,6 +261,7 @@ h1 {
 .word-item.is-open .word-sub { white-space: normal; }
 
 .word-detail { padding: 0 18px 16px; }
+.word-tr { margin: 0 0 8px; font-size: 16px; color: var(--gold); }
 .word-example { margin: 0 0 10px; font-style: italic; color: var(--text); font-size: 16px; }
 .word-date { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
 .word-actions { display: flex; gap: 22px; }

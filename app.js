@@ -145,6 +145,8 @@
     }
     var before = state.words.length;
     var created = L.createWord(wordEl.value, $('add-meaning').value, $('add-example').value, Date.now());
+    var trTyped = $('add-tr').value.trim();
+    if (trTyped) created.tr = trTyped;
     state.words.push(created);
     markActive();
     save();
@@ -179,7 +181,7 @@
   /* ---------- automatic meaning + example ---------- */
 
   var LK = window.VocabLookup;
-  var autoFields = [$('add-meaning'), $('add-example')];
+  var autoFields = [$('add-tr'), $('add-meaning'), $('add-example')];
   var lookupTimer = null;
 
   // A field the user typed in belongs to the user; only empty or auto-filled fields get filled.
@@ -216,7 +218,7 @@
         if ($('add-word').value.trim() !== typed) return; // the word changed meanwhile
         setLookingUp(false);
         if (!res) return;
-        [[$('add-meaning'), res.meaning], [$('add-example'), res.example]].forEach(function (p) {
+        [[$('add-tr'), res.tr], [$('add-meaning'), res.meaning], [$('add-example'), res.example]].forEach(function (p) {
           if (p[0].dataset.auto !== 'user' && p[1]) { p[0].value = p[1]; p[0].dataset.auto = 'filled'; grow(p[0]); }
         });
       });
@@ -399,6 +401,7 @@
 
       if (w.id === openId) {
         var d = el('div', 'word-detail');
+        if (w.tr) d.appendChild(el('p', 'word-tr', w.tr));
         if (w.example) d.appendChild(el('p', 'word-example', w.example));
         d.appendChild(el('p', 'word-date', 'Added ' + formatDate(w.createdAt)));
         var acts = el('div', 'word-actions');
@@ -467,6 +470,7 @@
   function openEdit(w) {
     editingId = w.id;
     $('edit-word').value = w.word;
+    $('edit-tr').value = w.tr || '';
     $('edit-meaning').value = w.meaning;
     $('edit-example').value = w.example;
     $('edit-note').textContent = '';
@@ -488,7 +492,11 @@
     w.word = newWord;
     w.meaning = $('edit-meaning').value.trim();
     w.example = $('edit-example').value.trim();
-    if (renamed) { delete w.tr; delete w.lookupTried; } // the old translation no longer fits
+    var trEdit = $('edit-tr').value.trim();
+    var oldTr = w.tr || '';
+    if (renamed && trEdit === oldTr) trEdit = ''; // renamed but Turkish untouched: it belonged to the old word
+    if (trEdit) w.tr = trEdit; else delete w.tr;
+    if (renamed) delete w.lookupTried;
     save();
     $('edit-dialog').close();
     renderList();

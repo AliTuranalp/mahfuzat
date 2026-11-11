@@ -35,6 +35,10 @@
           <input id="add-word" class="field field-word" type="text" placeholder="Type a word"
                  autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Word">
           <label class="entry-row">
+            <span class="k">Turkish</span>
+            <textarea id="add-tr" class="field field-grow" rows="1" placeholder="Optional" enterkeyhint="done" lang="tr"></textarea>
+          </label>
+          <label class="entry-row">
             <span class="k">Meaning</span>
             <textarea id="add-meaning" class="field field-grow" rows="1" placeholder="Optional" enterkeyhint="done"></textarea>
           </label>
@@ -182,6 +186,7 @@
       <p class="sheet-title">Edit word</p>
       <input id="edit-word" class="field field-word" type="text" aria-label="Word"
              autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="edit-tr" class="field" type="text" placeholder="Turkish — optional" aria-label="Turkish" lang="tr">
       <input id="edit-meaning" class="field" type="text" placeholder="Meaning — optional" aria-label="Meaning">
       <input id="edit-example" class="field" type="text" placeholder="Example sentence — optional" aria-label="Example sentence">
       <p id="edit-note" class="note" role="status" aria-live="polite"></p>
