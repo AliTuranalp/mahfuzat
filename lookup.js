@@ -66,19 +66,80 @@
     return out;
   }
 
-  // Resolves to { meaning, example, tr } or null (not found, offline, or the service failed).
-  function lookup(word) {
-    word = clean(word);
-    if (!word || typeof fetch !== 'function') return Promise.resolve(null);
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve(null);
+  function getJSON(url, ms) {
     var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 7000) : null;
-    return fetch(ENDPOINT + encodeURIComponent(word), ctrl ? { signal: ctrl.signal } : undefined)
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (data) { return parse(data, word); })
-      .catch(function () { return null; })
-      .then(function (res) { if (timer) clearTimeout(timer); return res; });
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms) : null;
+    return fetch(url, ctrl ? { signal: ctrl.signal, cache: 'no-store' } : { cache: 'no-store' })
+      .then(function (r) {
+        if (timer) clearTimeout(timer);
+        if (r.status === 404) return null;
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }, function (e) {
+        if (timer) clearTimeout(timer);
+        throw new Error(e && e.name === 'AbortError' ? 'timeout' : 'network');
+      });
   }
 
-  return { parse: parse, lookup: lookup };
+  // Backup when Google fails: English senses from dictionaryapi.dev, Turkish from MyMemory.
+  function parseBackup(dict, mem, word) {
+    var senses = { tr: [], en: [] }, meaning = '', example = '', tr = '';
+    (Array.isArray(dict) ? dict : []).forEach(function (entry) {
+      (entry.meanings || []).forEach(function (m) {
+        var defs = (m.definitions || []).filter(function (d) { return d.definition; }).slice(0, 8).map(function (d) {
+          var o = { gloss: sentence(d.definition) };
+          if (d.example) o.example = sentence(d.example);
+          return o;
+        });
+        if (defs.length) senses.en.push({ pos: clean(m.partOfSpeech), defs: defs });
+      });
+    });
+    senses.en.forEach(function (g) {
+      g.defs.forEach(function (d) {
+        if (!meaning) meaning = d.gloss;
+        if (!example && d.example) example = d.example;
+      });
+    });
+    var t = mem && mem.responseData && clean(mem.responseData.translatedText).replace(/[.!?]+$/, '');
+    if (t && t.toLowerCase() !== clean(word).toLowerCase() && !/MYMEMORY|INVALID|QUERY/i.test(t)) {
+      tr = t.charAt(0).toLowerCase() + t.slice(1);
+      senses.tr.push({ pos: '', terms: [tr] });
+    }
+    if (!meaning && !example && !tr) return null;
+    var out = { meaning: meaning, example: example, tr: tr, source: 'backup' };
+    if (senses.en.length) out.senses = senses;
+    return out;
+  }
+
+  var api = { parse: parse, parseBackup: parseBackup, lastError: '' };
+
+  // Resolves to { meaning, example, tr, senses } or null. Google first (tried twice), then the backups.
+  // On failure api.lastError says why ('' = the word simply was not found).
+  function lookup(word) {
+    word = clean(word);
+    api.lastError = '';
+    if (!word || typeof fetch !== 'function') return Promise.resolve(null);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) { api.lastError = 'offline'; return Promise.resolve(null); }
+    var errs = [];
+    function google() {
+      return getJSON(ENDPOINT + encodeURIComponent(word), 8000)
+        .then(function (d) { return parse(d, word); }, function (e) { errs.push('Google ' + e.message); return undefined; });
+    }
+    return google()
+      .then(function (r) { return r === undefined ? new Promise(function (ok) { setTimeout(ok, 700); }).then(google) : r; })
+      .then(function (r) {
+        if (r) return r;
+        return Promise.all([
+          getJSON('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word), 8000).catch(function (e) { errs.push('dictionary ' + e.message); return null; }),
+          getJSON('https://api.mymemory.translated.net/get?langpair=en%7Ctr&q=' + encodeURIComponent(word), 8000).catch(function (e) { errs.push('translation ' + e.message); return null; })
+        ]).then(function (b) {
+          var res = parseBackup(b[0], b[1], word);
+          if (!res && errs.length) api.lastError = errs.join(', ');
+          return res;
+        });
+      });
+  }
+  api.lookup = lookup;
+
+  return api;
 }));

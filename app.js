@@ -120,18 +120,10 @@
   }
 
   function renderAdd() {
-    var goal = $('goal');
-    if (document.activeElement !== goal) goal.value = state.goal;
-    $('quote').textContent = C.quotes[L.dailyIndex(new Date(), C.quotes.length)];
     renderStats();
     $('backup-nudge').hidden = !L.shouldRemindBackup(state, Date.now());
   }
 
-  $('goal').addEventListener('input', function (e) { state.goal = e.target.value; save(); });
-  $('goal').addEventListener('keydown', function (e) { if (e.key === 'Enter') e.target.blur(); });
-  $('goal').addEventListener('blur', function (e) {
-    if (!e.target.value.trim()) { e.target.value = state.goal = defaults().goal; save(); }
-  });
 
   $('add-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -173,7 +165,8 @@
       } else if (!w.meaning || !w.example) {
         note('add-note', navigator.onLine === false
           ? 'Saved offline. The meaning will be added when you are back online.'
-          : 'Saved. No dictionary entry found for “' + w.word + '”.', null, 5000);
+          : LK.lastError ? 'Saved. Dictionary not reachable (' + LK.lastError + '); it will be filled in later.'
+          : 'Saved. No dictionary entry found for “' + w.word + '”.', null, 6000);
       } else {
         note('add-note', 'Saved.');
       }
@@ -229,7 +222,12 @@
       LK.lookup(typed).then(function (res) {
         if ($('add-word').value.trim() !== typed) return; // the word changed meanwhile
         setLookingUp(false);
-        if (!res) return;
+        if (!res) {
+          note('add-note', LK.lastError === 'offline' ? 'Offline. Save it now; the meaning is added when you are back online.'
+            : LK.lastError ? 'Dictionary not reachable (' + LK.lastError + '). Save it now; it is filled in later.'
+            : 'No dictionary entry for “' + typed + '”.', 'warn', 6000);
+          return;
+        }
         liveSenses = res.senses ? { word: typed, senses: res.senses } : null;
         renderAddMore();
         [[$('add-tr'), res.tr], [$('add-meaning'), res.meaning], [$('add-example'), res.example]].forEach(function (p) {
