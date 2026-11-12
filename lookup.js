@@ -8,7 +8,7 @@
   'use strict';
 
   var ENDPOINT = 'https://translate.googleapis.com/translate_a/single' +
-    '?client=gtx&sl=en&tl=tr&hl=en&dt=t&dt=md&dt=ex&dj=1&q=';
+    '?client=gtx&sl=en&tl=tr&hl=en&dt=t&dt=bd&dt=md&dt=ex&dj=1&q=';
 
   function clean(s) {
     return String(s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
@@ -45,8 +45,25 @@
       var ex = (data.examples && data.examples.example) || [];
       if (ex.length) example = sentence(ex[0].text);
     }
+    // Every sense, like a dictionary page: Turkish equivalents and English definitions by part of speech.
+    var senses = { tr: [], en: [] };
+    (data.dict || []).forEach(function (b) {
+      var terms = (b.terms || []).map(clean).filter(Boolean).slice(0, 15);
+      if (terms.length) senses.tr.push({ pos: clean(b.pos), terms: terms });
+    });
+    groups.forEach(function (g) {
+      var defs = (g.entry || []).filter(function (x) { return x.gloss; }).slice(0, 8).map(function (x) {
+        var d = { gloss: sentence(x.gloss) };
+        if (x.example) d.example = sentence(x.example);
+        return d;
+      });
+      if (defs.length) senses.en.push({ pos: clean(g.pos), defs: defs });
+    });
+    if (!tr && senses.tr.length) tr = senses.tr[0].terms[0];
     if (!meaning && !example && !tr) return null;
-    return { meaning: meaning, example: example, tr: tr };
+    var out = { meaning: meaning, example: example, tr: tr };
+    if (senses.tr.length || senses.en.length) out.senses = senses;
+    return out;
   }
 
   // Resolves to { meaning, example, tr } or null (not found, offline, or the service failed).

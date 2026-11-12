@@ -47,6 +47,7 @@
             <textarea id="add-example" class="field field-grow field-example" rows="1" placeholder="Optional" enterkeyhint="done"></textarea>
           </label>
         </div>
+        <button type="button" class="more-btn" id="add-more" hidden></button>
         <button class="btn-primary" type="submit">Save</button>
       </form>
 
@@ -136,6 +137,8 @@
               <p id="card-tr" class="card-tr" lang="tr"></p>
               <div class="card-field"><span class="k">Meaning</span><p id="card-meaning" class="card-meaning"></p></div>
               <div class="card-field"><span class="k">Example</span><p id="card-example" class="card-example"></p></div>
+              <button type="button" class="more-btn" id="card-more" hidden></button>
+              <div id="card-mine" class="mine-wrap"></div>
             </div>
           </div>
         </div>
@@ -212,6 +215,15 @@
         <button type="submit" class="btn-primary">Save</button>
       </div>
       <button type="button" class="sync-off" id="sync-off">Turn sync off on this device</button>
+    </form>
+  </dialog>
+
+  <!-- All meanings -->
+  <dialog id="senses-dialog" class="sheet senses-sheet">
+    <form method="dialog">
+      <p id="senses-word" class="senses-word"></p>
+      <div id="senses-body" class="senses-body"></div>
+      <div class="sheet-actions"><button class="btn-quiet" value="close">Close</button></div>
     </form>
   </dialog>
 

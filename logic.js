@@ -120,6 +120,7 @@
       if (hit) {
         if (raw.learned === true) hit.learned = true;
         if (!hit.tr && typeof raw.tr === 'string' && raw.tr.trim()) hit.tr = raw.tr.trim();
+        if (!hit.senses && raw.senses && typeof raw.senses === 'object') hit.senses = raw.senses;
         skipped++;
         return;
       }
@@ -134,6 +135,8 @@
         learned: raw.learned === true
       };
       if (typeof raw.tr === 'string' && raw.tr.trim()) w.tr = raw.tr.trim();
+      if (raw.senses && typeof raw.senses === 'object') w.senses = raw.senses;
+      if (Array.isArray(raw.mine) && raw.mine.length) w.mine = raw.mine;
       // Guard against an id clash with a different word.
       if (result.some(function (x) { return x.id === w.id; })) w.id = makeId(createdAt) + 'i' + i;
       result.push(w);

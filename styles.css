@@ -530,3 +530,33 @@ h1 {
   .card.is-flipped .card-front { opacity: 0; }
   .card.is-flipped .card-back { opacity: 1; }
 }
+
+/* ============ All meanings + my sentences ============ */
+.more-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 12px; padding: 6px 14px; border-radius: 999px; background: var(--surface-2); color: var(--gold); font-size: 15px; font-weight: 600; }
+.more-btn:active { background: #3A3A3C; }
+.card-back .more-btn { margin: 4px 20px 0; align-self: flex-start; }
+.card-back { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+.senses-sheet { max-height: 82vh; max-height: 82dvh; overflow-y: auto; }
+.senses-word { margin: 0 0 4px; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.senses-body h3 { margin: 18px 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.senses-body .pos { color: var(--gold); }
+.sense-terms { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; padding: 0; list-style: none; }
+.sense-terms li { padding: 5px 11px; border-radius: 999px; background: var(--surface-2); font-size: 15px; }
+.sense-defs { margin: 0; padding: 0 0 0 20px; }
+.sense-defs li { margin: 0 0 10px; font-size: 16px; line-height: 1.4; }
+.sense-defs .ex { display: block; margin-top: 2px; font-style: italic; color: var(--muted); font-size: 15px; }
+
+.mine-wrap { padding: 14px 20px 18px; border-top: 1px solid var(--sep); }
+.word-detail .mine-wrap { padding: 12px 0 14px; border-top: 0; }
+.mine-wrap .k { margin-bottom: 6px; }
+.mine-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.mine-list li { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 16px; line-height: 1.4; border-bottom: 1px solid var(--sep); }
+.mine-list li span { flex: 1; overflow-wrap: anywhere; }
+.mine-del { flex: none; width: 32px; height: 32px; margin: -4px -6px -4px 0; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
+.mine-del:active { background: var(--surface-2); color: var(--danger); }
+.mine-del svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.mine-add { display: flex; gap: 8px; }
+.mine-add input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 0; border-radius: var(--radius-sm); background: var(--surface-2); font-size: 16px; }
+.mine-add input:focus { outline: 2px solid var(--gold); outline-offset: 0; }
+.mine-add button { flex: none; height: 40px; padding: 0 14px; border-radius: var(--radius-sm); background: var(--gold); color: #000; font-weight: 700; font-size: 15px; }

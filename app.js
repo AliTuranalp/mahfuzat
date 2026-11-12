@@ -147,6 +147,8 @@
     var created = L.createWord(wordEl.value, $('add-meaning').value, $('add-example').value, Date.now());
     var trTyped = $('add-tr').value.trim();
     if (trTyped) created.tr = trTyped;
+    if (liveSenses && liveSenses.word === created.word) created.senses = liveSenses.senses;
+    liveSenses = null; $('add-more').hidden = true;
     state.words.push(created);
     markActive();
     save();
@@ -204,8 +206,18 @@
     autoFields.forEach(function (f) { f.value = ''; f.dataset.auto = ''; grow(f); });
   }
 
+  var liveSenses = null;
+  function renderAddMore() {
+    var b = $('add-more');
+    var ok = liveSenses && liveSenses.word === $('add-word').value.trim();
+    b.hidden = !ok;
+    if (ok) b.textContent = moreLabel(liveSenses.senses);
+  }
+  $('add-more').addEventListener('click', function () { if (liveSenses) openSenses(liveSenses.word, liveSenses.senses); });
+
   $('add-word').addEventListener('input', function (e) {
     var typed = e.target.value.trim();
+    liveSenses = null; renderAddMore();
     clearTimeout(lookupTimer);
     autoFields.forEach(function (f) { if (f.dataset.auto === 'filled') { f.value = ''; f.dataset.auto = ''; grow(f); } });
     setLookingUp(false);
@@ -218,6 +230,8 @@
         if ($('add-word').value.trim() !== typed) return; // the word changed meanwhile
         setLookingUp(false);
         if (!res) return;
+        liveSenses = res.senses ? { word: typed, senses: res.senses } : null;
+        renderAddMore();
         [[$('add-tr'), res.tr], [$('add-meaning'), res.meaning], [$('add-example'), res.example]].forEach(function (p) {
           if (p[0].dataset.auto !== 'user' && p[1]) { p[0].value = p[1]; p[0].dataset.auto = 'filled'; grow(p[0]); }
         });
@@ -225,7 +239,7 @@
     }, 600);
   });
 
-  function needsLookup(w) { return !w.meaning || !w.example || !w.tr; }
+  function needsLookup(w) { return !w.meaning || !w.example || !w.tr || !w.senses; }
 
   // Fill a saved word's empty meaning/example/Turkish from the dictionary; user text is never replaced.
   function fillMissing(id) {
@@ -238,6 +252,7 @@
       if (!cur.meaning && res.meaning) { cur.meaning = res.meaning; changed = true; }
       if (!cur.example && res.example) { cur.example = res.example; changed = true; }
       if (!cur.tr && res.tr) { cur.tr = res.tr; changed = true; }
+      if (!cur.senses && res.senses) { cur.senses = res.senses; changed = true; }
       if (changed) {
         save();
         if (currentTab === 'list') renderList();
@@ -363,6 +378,98 @@
     renderSync();
   });
 
+  /* ---------- all meanings (dictionary view) ---------- */
+
+  function senseCount(sv) {
+    var n = 0;
+    (sv.tr || []).forEach(function (g) { n += g.terms.length; });
+    (sv.en || []).forEach(function (g) { n += g.defs.length; });
+    return n;
+  }
+  function moreLabel(sv) { return 'All meanings (' + senseCount(sv) + ')'; }
+
+  function openSenses(word, sv) {
+    $('senses-word').textContent = word;
+    var body = $('senses-body');
+    body.textContent = '';
+    if (sv.tr && sv.tr.length) {
+      body.appendChild(el('h3', '', 'Türkçe'));
+      sv.tr.forEach(function (g) {
+        var h = el('p', 'k pos', g.pos); body.appendChild(h);
+        var ul = el('ul', 'sense-terms');
+        g.terms.forEach(function (t) { ul.appendChild(el('li', '', t)); });
+        body.appendChild(ul);
+      });
+    }
+    if (sv.en && sv.en.length) {
+      body.appendChild(el('h3', '', 'English'));
+      sv.en.forEach(function (g) {
+        body.appendChild(el('p', 'k pos', g.pos));
+        var ol = el('ol', 'sense-defs');
+        g.defs.forEach(function (d) {
+          var li = el('li', '', d.gloss);
+          if (d.example) li.appendChild(el('span', 'ex', d.example));
+          ol.appendChild(li);
+        });
+        body.appendChild(ol);
+      });
+    }
+    $('senses-dialog').showModal();
+    $('senses-dialog').scrollTop = 0;
+  }
+
+  /* ---------- my own sentences ---------- */
+
+  function xSvg() {
+    var ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), p = document.createElementNS(ns, 'path');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+    p.setAttribute('d', 'M6 6l12 12M18 6L6 18'); svg.appendChild(p);
+    return svg;
+  }
+
+  // Renders the "My sentences" block for word w into container (list detail or study card back).
+  function renderMine(box, w) {
+    box.textContent = '';
+    box.appendChild(el('span', 'k', 'My sentences'));
+    var ul = el('ul', 'mine-list');
+    (w.mine || []).forEach(function (m) {
+      var li = el('li');
+      li.appendChild(el('span', '', m.text));
+      var x = el('button', 'mine-del'); x.type = 'button';
+      x.setAttribute('aria-label', 'Delete this sentence'); x.appendChild(xSvg());
+      x.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var cur = byId(w.id); if (!cur) return;
+        cur.mine = (cur.mine || []).filter(function (y) { return y.id !== m.id; });
+        if (!cur.mine.length) delete cur.mine;
+        save(); renderMine(box, cur);
+      });
+      li.appendChild(x);
+      ul.appendChild(li);
+    });
+    if (ul.children.length) box.appendChild(ul);
+    var row = el('div', 'mine-add');
+    var inp = el('input'); inp.type = 'text'; inp.placeholder = 'Write a sentence with “' + w.word + '”';
+    inp.setAttribute('enterkeyhint', 'done'); inp.setAttribute('aria-label', 'Your sentence');
+    var add = el('button', '', 'Add'); add.type = 'button';
+    function commit() {
+      var text = inp.value.trim().replace(/\s+/g, ' ');
+      if (!text) { inp.focus(); return; }
+      var cur = byId(w.id); if (!cur) return;
+      cur.mine = (cur.mine || []).concat([{ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text: text, at: Date.now() }]);
+      markActive(); save(); renderMine(box, cur);
+      var again = box.querySelector('.mine-add input'); if (again) again.focus();
+    }
+    add.addEventListener('click', function (e) { e.stopPropagation(); commit(); });
+    inp.addEventListener('keydown', function (e) {
+      e.stopPropagation();
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); commit(); }
+    });
+    inp.addEventListener('click', function (e) { e.stopPropagation(); });
+    row.appendChild(inp); row.appendChild(add);
+    box.appendChild(row);
+  }
+
   /* ---------- list ---------- */
 
   var openId = null;
@@ -403,6 +510,11 @@
         var d = el('div', 'word-detail');
         if (w.tr) d.appendChild(el('p', 'word-tr', w.tr));
         if (w.example) d.appendChild(el('p', 'word-example', w.example));
+        if (w.senses) {
+          var mb = el('button', 'more-btn', moreLabel(w.senses)); mb.type = 'button'; mb.dataset.action = 'senses';
+          d.appendChild(mb);
+        }
+        var mw = el('div', 'mine-wrap'); renderMine(mw, w); d.appendChild(mw);
         d.appendChild(el('p', 'word-date', 'Added ' + formatDate(w.createdAt)));
         var acts = el('div', 'word-actions');
         var ed = el('button', '', 'Edit'); ed.type = 'button'; ed.dataset.action = 'edit';
@@ -439,6 +551,9 @@
     if (!w) return;
 
     switch (btn.dataset.action) {
+      case 'senses':
+        openSenses(w.word, w.senses);
+        break;
       case 'toggle':
         openId = openId === id ? null : id;
         renderList();
@@ -646,13 +761,22 @@
     $('card-meaning').textContent = w.meaning;
     $('card-example').textContent = w.example;
     $('card-tr').textContent = w.tr || '';
+    $('card-more').hidden = !w.senses;
+    if (w.senses) $('card-more').textContent = moreLabel(w.senses);
+    renderMine($('card-mine'), w);
+    card.querySelector('.card-back').scrollTop = 0;
     card.querySelector('.card-back').classList.toggle('is-bare', !w.meaning && !w.example);
 
     var total = session.deck.length, pos = session.index + 1;
     $('study-counter').textContent = pos + ' / ' + total;
     $('study-progress').style.width = (pos / total * 100) + '%';
     $('study-prev').disabled = session.index === 0;
-    $('study-learned').setAttribute('aria-pressed', w.learned ? 'true' : 'false');
+    $('card-more').addEventListener('click', function () {
+    var w = session && byId(session.deck[session.index]);
+    if (w && w.senses) openSenses(w.word, w.senses);
+  });
+
+  $('study-learned').setAttribute('aria-pressed', w.learned ? 'true' : 'false');
   }
 
   function flip() { $('card').classList.toggle('is-flipped'); }
@@ -692,7 +816,11 @@
   // Tap to flip, swipe left = next, swipe right = previous.
   (function () {
     var card = $('card'), x0 = null, y0 = null, moved = false;
-    card.addEventListener('pointerdown', function (e) { x0 = e.clientX; y0 = e.clientY; moved = false; });
+    var INTERACTIVE = 'button, input, textarea, .mine-wrap';
+    card.addEventListener('pointerdown', function (e) {
+      if (e.target.closest(INTERACTIVE)) { x0 = null; return; } // buttons and typing on the back don't flip
+      x0 = e.clientX; y0 = e.clientY; moved = false;
+    });
     card.addEventListener('pointermove', function (e) {
       if (x0 !== null && Math.abs(e.clientX - x0) > 10) moved = true;
     });
@@ -705,10 +833,12 @@
     });
     card.addEventListener('pointercancel', function () { x0 = null; });
     card.addEventListener('keydown', function (e) {
+      if (e.target.closest(INTERACTIVE)) return;
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
     });
     document.addEventListener('keydown', function (e) {
       if (!session || currentTab !== 'study' || document.querySelector('dialog[open]')) return;
+      if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
       if (e.key === 'ArrowRight') next();
       if (e.key === 'ArrowLeft') prev();
     });

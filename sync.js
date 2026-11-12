@@ -13,7 +13,7 @@
 
   // What counts as "the word changed" between syncs.
   function sig(w) {
-    return JSON.stringify([w.word, w.meaning || '', w.example || '', w.tr || '', !!w.learned]);
+    return JSON.stringify([w.word, w.meaning || '', w.example || '', w.tr || '', !!w.learned, w.senses ? 1 : 0, (w.mine || []).map(function (m) { return m.id; }).join(',')]);
   }
 
   // A GitHub personal access token (classic ghp_… or fine-grained github_pat_…).
@@ -66,6 +66,8 @@
         learned: w.learned === true, createdAt: Number(w.createdAt) || Date.now(), updatedAt: Number(w.updatedAt) || 0
       };
       if (w.tr) inc.tr = String(w.tr);
+      if (w.senses && typeof w.senses === 'object') inc.senses = w.senses;
+      if (Array.isArray(w.mine) && w.mine.length) inc.mine = w.mine;
       var cur = byId[inc.id];
       if (cur) {
         if (inc.updatedAt > (cur.updatedAt || 0)) {
@@ -77,8 +79,12 @@
       }
       var twin = byWord[norm(inc.word)];
       if (twin) {
-        ['meaning', 'example', 'tr'].forEach(function (f) { if (!twin[f] && inc[f]) twin[f] = inc[f]; });
+        ['meaning', 'example', 'tr', 'senses'].forEach(function (f) { if (!twin[f] && inc[f]) twin[f] = inc[f]; });
         if (inc.learned) twin.learned = true;
+        if (inc.mine) {
+          var seen = {}; (twin.mine || []).forEach(function (m) { seen[m.id] = 1; });
+          twin.mine = (twin.mine || []).concat(inc.mine.filter(function (m) { return !seen[m.id]; }));
+        }
         twin.createdAt = Math.min(twin.createdAt || inc.createdAt, inc.createdAt);
         twin.updatedAt = Math.max(twin.updatedAt || 0, inc.updatedAt);
         return;

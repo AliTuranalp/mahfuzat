@@ -10,7 +10,6 @@ window.VocabContent = {
     'Slow is fine. Stopped is not.',
     'Raise the standard, not the volume.',
     'The quiet hours build the loud results.',
-    'You do not rise to your goals. You rise to your habits.',
     'Today’s word is tomorrow’s confidence.',
     'Mastery is patience wearing work clothes.',
     'Do the small thing well, and do it again.',
