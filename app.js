@@ -259,20 +259,26 @@
     });
   }
 
-  // Words saved offline get filled the next time the app opens online (a few per launch).
+  // Older words and words saved offline get their missing fields filled when the app opens online.
+  // All of them, one at a time with a short pause, so the dictionary is not flooded.
+  var backfilling = false;
   function backfill() {
+    if (backfilling) return;
     var RETRY = 6 * 3600e3; // a failed lookup is tried again after 6 hours, never given up for good
     var todo = state.words.filter(function (w) {
       return needsLookup(w) && (typeof w.lookupTried !== 'number' || Date.now() - w.lookupTried > RETRY);
-    }).slice(0, 15);
+    });
+    if (!todo.length) return;
+    backfilling = true;
     todo.reduce(function (p, w) {
       return p.then(function () {
-        return fillMissing(w.id).then(function (ok) {
+        if (navigator.onLine === false) return;
+        return new Promise(function (ok) { setTimeout(ok, 250); }).then(function () { return fillMissing(w.id); }).then(function (ok) {
           var cur = byId(w.id);
           if (cur && needsLookup(cur) && navigator.onLine !== false) { cur.lookupTried = Date.now(); save(); }
         });
       });
-    }, Promise.resolve());
+    }, Promise.resolve()).then(function () { backfilling = false; }, function () { backfilling = false; });
   }
   if (navigator.onLine !== false) setTimeout(backfill, 1500);
   window.addEventListener('online', backfill);
